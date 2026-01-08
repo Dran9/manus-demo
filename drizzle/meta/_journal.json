@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1767817686822,
+      "tag": "0000_puzzling_tigra",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1767818528270,
+      "tag": "0001_absent_echo",
+      "breakpoints": true
+    }
+  ]
+}
