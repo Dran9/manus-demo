@@ -1,4 +1,3 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,13 +27,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Trash2, LogOut, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { supabase, signOut } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 export default function Contacts() {
-  const { user, logout, loading: authLoading } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [, navigate] = useLocation();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -43,6 +45,29 @@ export default function Contacts() {
     phone: "",
     city: "",
   });
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+      
+      if (!session?.user) {
+        navigate("/");
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        navigate("/");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const utils = trpc.useUtils();
   const { data: contacts = [], isLoading } = trpc.contacts.list.useQuery();
@@ -79,7 +104,7 @@ export default function Contacts() {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     navigate("/");
   };
 
@@ -107,7 +132,7 @@ export default function Contacts() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Contacts</h1>
             <p className="text-sm text-gray-600 mt-1">
-              Welcome, {user.name || user.email}
+              Welcome, {user.user_metadata?.full_name || user.email}
             </p>
           </div>
           <Button

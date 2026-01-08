@@ -1,18 +1,46 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { signInWithGoogle, supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 export default function Home() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      navigate("/contacts");
+    // Check current session
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setLoading(false);
+      
+      if (session?.user) {
+        navigate("/contacts");
+      }
+    };
+
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        navigate("/contacts");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Failed to sign in:', error);
     }
-  }, [isAuthenticated, user, navigate]);
+  };
 
   if (loading) {
     return (
@@ -36,11 +64,12 @@ export default function Home() {
         </p>
 
         <div className="space-y-4">
-          <a href={getLoginUrl()}>
-            <Button className="w-full bg-indigo-600 hover:bg-indigo-700">
-              Sign in with Google
-            </Button>
-          </a>
+          <Button 
+            onClick={handleGoogleSignIn}
+            className="w-full bg-indigo-600 hover:bg-indigo-700"
+          >
+            Sign in with Google
+          </Button>
         </div>
 
         <div className="mt-8 pt-8 border-t border-gray-200">
